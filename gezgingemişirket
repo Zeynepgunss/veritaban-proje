@@ -1,0 +1,407 @@
+import tkinter as tk
+import tkinter.simpledialog
+import sqlite3
+
+class Gemi:
+    def init(self, seri_no, ad, agirlik, yapim_yili, gemi_turu):
+        self.seri_no = seri_no
+        self.ad = ad
+        self.agirlik = agirlik
+        self.yapim_yili = yapim_yili
+        self.gemi_turu = gemi_turu
+
+class Sefer:
+    def init(self, sefer_id, kalkis_tarihi, donus_tarihi, kalkis_limani):
+        self.sefer_id = sefer_id
+        self.kalkis_tarihi = kalkis_tarihi
+        self.donus_tarihi = donus_tarihi
+        self.kalkis_limani = kalkis_limani
+
+class Liman:
+    def init(self, liman_id, liman_adi, ulke, nufus, pasaport_istiyor_mu, demirleme_ucreti):
+        self.liman_id = liman_id
+        self.liman_adi = liman_adi
+        self.ulke = ulke
+        self.nufus = nufus
+        self.pasaport_istiyor_mu = pasaport_istiyor_mu
+        self.demirleme_ucreti = demirleme_ucreti
+
+class Personel:
+    def init(self, ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi):
+        self.ID = ID
+        self.ad = ad
+        self.soyad = soyad
+        self.adres = adres
+        self.vatandaslik = vatandaslik
+        self.dogum_tarihi = dogum_tarihi
+        self.ise_giris_tarihi = ise_giris_tarihi
+class Kaptan(Personel):
+    def init(self, ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, lisans_tarihi, lisans_numara):
+        super().init(ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi)
+        self.lisans_tarihi = lisans_tarihi
+        self.lisans_numara = lisans_numara
+
+class Murettabat(Personel):
+    def init(self, ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, gorev):
+        super().init(ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi)
+        self.gorev = gorev
+
+def personel_ekle(ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, gorev, lisans_tarihi=None, lisans_numara=None):
+    # Personel verilerini veritabanına ekle
+    conn = sqlite3.connect('personel.db')
+    cursor = conn.cursor()
+    if gorev == "Kaptan":
+        cursor.execute('''CREATE TABLE IF NOT EXISTS kaptanlar
+                          (ID TEXT, ad TEXT, soyad TEXT, adres TEXT, vatandaslik TEXT, dogum_tarihi TEXT, ise_giris_tarihi TEXT, lisans_tarihi TEXT, lisans_numara TEXT)''')
+        cursor.execute("INSERT INTO kaptanlar VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       (ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, lisans_tarihi, lisans_numara))
+    elif gorev == "Mürettebat":
+        cursor.execute('''CREATE TABLE IF NOT EXISTS murettabatlar
+                          (ID TEXT, ad TEXT, soyad TEXT, adres TEXT, vatandaslik TEXT, dogum_tarihi TEXT, ise_giris_tarihi TEXT, gorev TEXT)''')
+        cursor.execute("INSERT INTO murettabatlar VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, gorev))
+    conn.commit()
+    conn.close()
+
+    # Form alanlarındaki bilgileri yan tarafta göster
+    entry_listbox.insert(tk.END, f"{gorev} ID: {ID}")
+    entry_listbox.insert(tk.END, f"Ad: {ad}")
+    entry_listbox.insert(tk.END, f"Soyad: {soyad}")
+    entry_listbox.insert(tk.END, f"Adres: {adres}")
+    entry_listbox.insert(tk.END, f"Vatandaşlık: {vatandaslik}")
+    entry_listbox.insert(tk.END, f"Doğum Tarihi: {dogum_tarihi}")
+    entry_listbox.insert(tk.END, f"İşe Giriş Tarihi: {ise_giris_tarihi}")
+    if gorev == "Kaptan":
+        entry_listbox.insert(tk.END, f"Lisans Tarihi: {lisans_tarihi}")
+        entry_listbox.insert(tk.END, f"Lisans Numarası: {lisans_numara}")
+    entry_listbox.insert(tk.END, f"Görev: {gorev}")
+    entry_listbox.insert(tk.END, "")
+def gemi_ekle():
+    seri_no = entry_seri_no.get()
+    ad = entry_ad.get()
+    agirlik = entry_agirlik.get()
+    yapim_yili = entry_yapim_yili.get()
+    gemi_turu = gemi_turu_secim.get()
+
+    # Gemi türüne göre ek bilgileri al
+    if gemi_turu == "Yolcu Gemisi":
+        yolcu_kapasitesi = tk.simpledialog.askinteger("Yolcu Kapasitesi", "Yolcu Kapasitesini Giriniz:")
+        benzin_litre = None
+        konteyner_sayisi = None
+        max_kapasite = None
+    elif gemi_turu == "Petrol Tankeri":
+        benzin_litre = tk.simpledialog.askfloat("Benzin Litresi", "Benzin Litresini Giriniz:")
+        yolcu_kapasitesi = None
+        konteyner_sayisi = None
+        max_kapasite = None
+    elif gemi_turu == "Konteyner Gemisi":
+        konteyner_sayisi = tk.simpledialog.askinteger("Konteyner Sayısı", "Konteyner Sayısını Giriniz:")
+        max_kapasite = tk.simpledialog.askinteger("Maksimum Kapasite", "Maksimum Kapasiteyi Giriniz:")
+        yolcu_kapasitesi = None
+        benzin_litre = None
+    else:
+        benzin_litre = None
+        yolcu_kapasitesi = None
+        konteyner_sayisi = None
+        max_kapasite = None
+
+    # Gemi verilerini veritabanına ekle
+    conn = sqlite3.connect('gemiler.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS gemiler
+                      (seri_no TEXT, ad TEXT, agirlik REAL, yapim_yili INTEGER,
+                       gemi_turu TEXT, yolcu_kapasitesi INTEGER, benzin_litre REAL,
+                       konteyner_sayisi INTEGER, max_kapasite INTEGER)''')
+    cursor.execute("INSERT INTO gemiler (seri_no, ad, agirlik, yapim_yili, gemi_turu, yolcu_kapasitesi) VALUES (?, ?, ?, ?, ?, ?)",
+        (seri_no, ad, agirlik, yapim_yili, gemi_turu, yolcu_kapasitesi))
+
+    conn.commit()
+    conn.close()
+
+    # Form alanlarındaki bilgileri yan tarafta göster
+    entry_listbox.insert(tk.END, f"Gemi Seri No: {seri_no}")
+    entry_listbox.insert(tk.END, f"Gemi Adı: {ad}")
+    entry_listbox.insert(tk.END, f"Gemi Ağırlığı: {agirlik}")
+    entry_listbox.insert(tk.END, f"Gemi Yapım Yılı: {yapim_yili}")
+    entry_listbox.insert(tk.END, f"Gemi Türü: {gemi_turu}")
+    if gemi_turu == "Yolcu Gemisi":
+        entry_listbox.insert(tk.END, f"Yolcu Kapasitesi: {yolcu_kapasitesi}")
+    elif gemi_turu == "Petrol Tankeri":
+        entry_listbox.insert(tk.END, f"Benzin Litresi: {benzin_litre}")
+    elif gemi_turu == "Konteyner Gemisi":
+        entry_listbox.insert(tk.END, f"Konteyner Sayısı: {konteyner_sayisi}")
+        entry_listbox.insert(tk.END, f"Maksimum Kapasite: {max_kapasite}")
+    entry_listbox.insert(tk.END, "")  # Boş satır eklendi
+
+
+
+def sefer_ekle():
+    sefer_id = entry_sefer_id.get()
+    kalkis_tarihi = entry_kalkis_tarihi.get()
+    donus_tarihi = entry_donus_tarihi.get()
+    kalkis_limani = entry_kalkis_limani.get()
+
+    sefer = Sefer(sefer_id, kalkis_tarihi, donus_tarihi, kalkis_limani)
+
+    # Sefer verilerini veritabanına ekle
+    conn = sqlite3.connect('seferler.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS seferler
+                      (sefer_id TEXT, kalkis_tarihi TEXT, donus_tarihi TEXT, kalkis_limani TEXT)''')
+    cursor.execute("INSERT INTO seferler VALUES (?, ?, ?, ?)", (sefer_id, kalkis_tarihi, donus_tarihi, kalkis_limani))
+    conn.commit()
+    conn.close()
+
+    # Form alanlarındaki bilgileri yan tarafta göster
+    entry_listbox.insert(tk.END, f"Sefer ID: {sefer_id}")
+    entry_listbox.insert(tk.END, f"Kalkış Tarihi: {kalkis_tarihi}")
+    entry_listbox.insert(tk.END, f"Dönüş Tarihi: {donus_tarihi}")
+    entry_listbox.insert(tk.END, f"Kalkış Limanı: {kalkis_limani}")
+    entry_listbox.insert(tk.END, "")
+
+def liman_ekle():
+    liman_id = entry_liman_id.get()
+    liman_adi = entry_liman_adi.get()
+    ulke = entry_ulke.get()
+    nufus = entry_nufus.get()
+    pasaport_istiyor_mu = pasaport_secim.get()
+    demirleme_ucreti = entry_demirleme_ucreti.get()
+
+    liman = Liman(liman_id, liman_adi, ulke, nufus, pasaport_istiyor_mu, demirleme_ucreti)
+
+    # Liman verilerini veritabanına ekle
+    conn = sqlite3.connect('limanlar.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS limanlar
+                      (liman_id TEXT, liman_adi TEXT, ulke TEXT, nufus INTEGER, pasaport_istiyor_mu TEXT, demirleme_ucreti REAL)''')
+    cursor.execute("INSERT INTO limanlar VALUES (?, ?, ?, ?, ?, ?)",
+                   (liman_id, liman_adi, ulke, nufus, pasaport_istiyor_mu, demirleme_ucreti))
+    conn.commit()
+    conn.close()
+
+    # Form alanlarındaki bilgileri yan tarafta göster
+    entry_listbox.insert(tk.END, f"Liman ID: {liman_id}")
+    entry_listbox.insert(tk.END, f"Liman Adı: {liman_adi}")
+    entry_listbox.insert(tk.END, f"Ülke: {ulke}")
+    entry_listbox.insert(tk.END, f"Nüfus: {nufus}")
+    entry_listbox.insert(tk.END, f"Pasaport İstiyor mu: {pasaport_istiyor_mu}")
+    entry_listbox.insert(tk.END, f"Demirleme Ücreti: {demirleme_ucreti}")
+    entry_listbox.insert(tk.END, "")
+
+
+def personel_ekle(ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, gorev, lisans_tarihi="", lisans_numara=""):
+    # Personel verilerini veritabanına ekle
+    conn = sqlite3.connect('personel.db')
+    cursor = conn.cursor()
+    if gorev == "Kaptan":
+        cursor.execute('''CREATE TABLE IF NOT EXISTS kaptanlar
+                          (ID TEXT, ad TEXT, soyad TEXT, adres TEXT, vatandaslik TEXT, dogum_tarihi TEXT, ise_giris_tarihi TEXT, lisans_tarihi TEXT, lisans_numara TEXT)''')
+        cursor.execute("INSERT INTO kaptanlar VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       (ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, lisans_tarihi, lisans_numara))
+    elif gorev == "Mürettebat":
+        cursor.execute('''CREATE TABLE IF NOT EXISTS murettabatlar
+                          (ID TEXT, ad TEXT, soyad TEXT, adres TEXT, vatandaslik TEXT, dogum_tarihi TEXT, ise_giris_tarihi TEXT, gorev TEXT)''')
+        cursor.execute("INSERT INTO murettabatlar VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (ID, ad, soyad, adres, vatandaslik, dogum_tarihi, ise_giris_tarihi, gorev))
+    conn.commit()
+    conn.close()
+
+    # Form alanlarındaki bilgileri yan tarafta göster
+    entry_listbox.insert(tk.END, f"{gorev} ID: {ID}")
+    entry_listbox.insert(tk.END, f"Ad: {ad}")
+    entry_listbox.insert(tk.END, f"Soyad: {soyad}")
+    entry_listbox.insert(tk.END, f"Adres: {adres}")
+    entry_listbox.insert(tk.END, f"Vatandaşlık: {vatandaslik}")
+    entry_listbox.insert(tk.END, f"Doğum Tarihi: {dogum_tarihi}")
+    entry_listbox.insert(tk.END, f"İşe Giriş Tarihi: {ise_giris_tarihi}")
+    if gorev == "Kaptan":
+        entry_listbox.insert(tk.END, f"Lisans Tarihi: {lisans_tarihi}")
+        entry_listbox.insert(tk.END, f"Lisans Numarası: {lisans_numara}")
+    elif gorev == "Mürettebat":
+        entry_listbox.insert(tk.END, f"Görev: {gorev}")
+    entry_listbox.insert(tk.END, "")
+
+def personel_ekle_popup(personel_sayisi, gorev):
+    popup = tk.Toplevel()
+    popup.title(f"{gorev} Ekle")
+
+    label_personel_id = tk.Label(popup, text=f"{gorev} ID:")
+    label_personel_id.grid(row=0, column=0)
+    entry_personel_id = tk.Entry(popup)
+    entry_personel_id.grid(row=0, column=1)
+
+    label_personel_ad = tk.Label(popup, text="Ad:")
+    label_personel_ad.grid(row=1, column=0)
+    entry_personel_ad = tk.Entry(popup)
+    entry_personel_ad.grid(row=1, column=1)
+
+    label_personel_soyad = tk.Label(popup, text="Soyad:")
+    label_personel_soyad.grid(row=2, column=0)
+    entry_personel_soyad = tk.Entry(popup)
+    entry_personel_soyad.grid(row=2, column=1)
+
+    label_personel_adres = tk.Label(popup, text="Adres:")
+    label_personel_adres.grid(row=3, column=0)
+    entry_personel_adres = tk.Entry(popup)
+    entry_personel_adres.grid(row=3, column=1)
+
+    label_personel_vatandaslik = tk.Label(popup, text="Vatandaşlık:")
+    label_personel_vatandaslik.grid(row=4, column=0)
+    entry_personel_vatandaslik = tk.Entry(popup)
+    entry_personel_vatandaslik.grid(row=4, column=1)
+
+    label_personel_dogum_tarihi = tk.Label(popup, text="Doğum Tarihi:")
+    label_personel_dogum_tarihi.grid(row=5, column=0)
+    entry_personel_dogum_tarihi = tk.Entry(popup)
+    entry_personel_dogum_tarihi.grid(row=5, column=1)
+
+    label_personel_ise_giris_tarihi = tk.Label(popup, text="İşe Giriş Tarihi:")
+    label_personel_ise_giris_tarihi.grid(row=6, column=0)
+    entry_personel_ise_giris_tarihi = tk.Entry(popup)
+    entry_personel_ise_giris_tarihi.grid(row=6, column=1)
+
+    if gorev == "Kaptan":
+        label_lisans_tarihi = tk.Label(popup, text="Lisans Tarihi:")
+        label_lisans_tarihi.grid(row=7, column=0)
+        entry_lisans_tarihi = tk.Entry(popup)
+        entry_lisans_tarihi.grid(row=7, column=1)
+
+        label_lisans_numara = tk.Label(popup, text="Lisans Numarası:")
+        label_lisans_numara.grid(row=8, column=0)
+        entry_lisans_numara = tk.Entry(popup)
+        entry_lisans_numara.grid(row=8, column=1)
+    elif gorev == "Mürettebat":
+        label_gorev = tk.Label(popup, text="Görev:")
+        label_gorev.grid(row=7, column=0)
+        entry_gorev = tk.Entry(popup)
+        entry_gorev.grid(row=7, column=1)
+
+    button_personel_ekle = tk.Button(popup, text=f"{gorev} Ekle", command=lambda: personel_ekle(entry_personel_id.get(), entry_personel_ad.get(), entry_personel_soyad.get(), entry_personel_adres.get(), entry_personel_vatandaslik.get(), entry_personel_dogum_tarihi.get(), entry_personel_ise_giris_tarihi.get(), gorev, entry_lisans_tarihi.get() if gorev == "Kaptan" else "", entry_lisans_numara.get() if gorev == "Kaptan" else entry_gorev.get() if gorev == "Mürettebat" else ""))
+    button_personel_ekle.grid(row=9, columnspan=2)
+
+# Ana Pencere
+root = tk.Tk()
+root.title("Gezgin Gemi Şirketi")
+
+# Gemi Ekleme Arayüzü
+frame_gemi = tk.LabelFrame(root, text="Gemi Ekle")
+frame_gemi.pack(padx=10, pady=10)
+
+label_seri_no = tk.Label(frame_gemi, text="Seri No:")
+label_seri_no.grid(row=0, column=0)
+entry_seri_no = tk.Entry(frame_gemi)
+entry_seri_no.grid(row=0, column=1)
+
+label_ad = tk.Label(frame_gemi, text="Ad:")
+label_ad.grid(row=1, column=0)
+entry_ad = tk.Entry(frame_gemi)
+entry_ad.grid(row=1, column=1)
+
+label_agirlik = tk.Label(frame_gemi, text="Ağırlık:")
+label_agirlik.grid(row=2, column=0)
+entry_agirlik = tk.Entry(frame_gemi)
+entry_agirlik.grid(row=2, column=1)
+
+label_yapim_yili = tk.Label(frame_gemi, text="Yapım Yılı:")
+label_yapim_yili.grid(row=3, column=0)
+entry_yapim_yili = tk.Entry(frame_gemi)
+entry_yapim_yili.grid(row=3, column=1)
+
+label_gemi_turu = tk.Label(frame_gemi, text="Gemi Türü:")
+label_gemi_turu.grid(row=4, column=0)
+gemi_turu_secim = tk.StringVar()
+gemi_turu_secim.set("Yolcu Gemisi")
+entry_gemi_turu = tk.OptionMenu(frame_gemi, gemi_turu_secim, "Yolcu Gemisi", "Petrol Tankeri", "Konteyner Gemisi")
+entry_gemi_turu.grid(row=4, column=1)
+
+button_gemi_ekle = tk.Button(frame_gemi, text="Gemi Ekle", command=gemi_ekle)
+button_gemi_ekle.grid(row=5, columnspan=2)
+
+# Sefer Ekleme Arayüzü
+frame_sefer = tk.LabelFrame(root, text="Sefer Ekle")
+frame_sefer.pack(padx=10, pady=10)
+
+label_sefer_id = tk.Label(frame_sefer, text="Sefer ID:")
+label_sefer_id.grid(row=0, column=0)
+entry_sefer_id = tk.Entry(frame_sefer)
+entry_sefer_id.grid(row=0, column=1)
+
+label_kalkis_tarihi = tk.Label(frame_sefer, text="Kalkış Tarihi:")
+label_kalkis_tarihi.grid(row=1, column=0)
+entry_kalkis_tarihi = tk.Entry(frame_sefer)
+entry_kalkis_tarihi.grid(row=1, column=1)
+
+label_donus_tarihi = tk.Label(frame_sefer, text="Dönüş Tarihi:")
+label_donus_tarihi.grid(row=2, column=0)
+entry_donus_tarihi = tk.Entry(frame_sefer)
+entry_donus_tarihi.grid(row=2, column=1)
+
+label_kalkis_limani = tk.Label(frame_sefer, text="Kalkış Limanı:")
+label_kalkis_limani.grid(row=3, column=0)
+entry_kalkis_limani = tk.Entry(frame_sefer)
+entry_kalkis_limani.grid(row=3, column=1)
+
+button_sefer_ekle = tk.Button(frame_sefer, text="Sefer Ekle", command=sefer_ekle)
+button_sefer_ekle.grid(row=4, columnspan=2)
+
+# Liman Ekleme Arayüzü
+frame_liman = tk.LabelFrame(root, text="Liman Ekle")
+frame_liman.pack(padx=10, pady=10)
+
+label_liman_id = tk.Label(frame_liman, text="Liman ID:")
+label_liman_id.grid(row=0, column=0)
+entry_liman_id = tk.Entry(frame_liman)
+entry_liman_id.grid(row=0, column=1)
+
+label_liman_adi = tk.Label(frame_liman, text="Liman Adı:")
+label_liman_adi.grid(row=1, column=0)
+entry_liman_adi = tk.Entry(frame_liman)
+entry_liman_adi.grid(row=1, column=1)
+
+label_ulke = tk.Label(frame_liman, text="Ülke:")
+label_ulke.grid(row=2, column=0)
+entry_ulke = tk.Entry(frame_liman)
+entry_ulke.grid(row=2, column=1)
+
+label_nufus = tk.Label(frame_liman, text="Nüfus:")
+label_nufus.grid(row=3, column=0)
+entry_nufus = tk.Entry(frame_liman)
+entry_nufus.grid(row=3, column=1)
+
+label_pasaport = tk.Label(frame_liman, text="Pasaport İstiyor mu:")
+label_pasaport.grid(row=4, column=0)
+pasaport_secim = tk.StringVar()
+entry_pasaport = tk.OptionMenu(frame_liman, pasaport_secim, "Evet", "Hayır")
+entry_pasaport.grid(row=4, column=1)
+
+label_demirleme_ucreti = tk.Label(frame_liman, text="Demirleme Ücreti:")
+label_demirleme_ucreti.grid(row=5, column=0)
+entry_demirleme_ucreti = tk.Entry(frame_liman)
+entry_demirleme_ucreti.grid(row=5, column=1)
+
+button_liman_ekle = tk.Button(frame_liman, text="Liman Ekle", command=liman_ekle)
+button_liman_ekle.grid(row=6, columnspan=2)
+
+# Personel Ekleme Arayüzü
+frame_personel = tk.LabelFrame(root, text="Personel Ekle")
+frame_personel.pack(padx=10, pady=10)
+
+button_kaptan_ekle = tk.Button(frame_personel, text="Kaptan Ekle", command=lambda: personel_ekle_popup(1, "Kaptan"))
+button_kaptan_ekle.grid(row=0, column=0)
+
+button_murettabat_ekle = tk.Button(frame_personel, text="Mürettebat Ekle", command=lambda: personel_ekle_popup(1, "Mürettebat"))
+button_murettabat_ekle.grid(row=0, column=1)
+
+# Bilgi Gösterme Alanı
+frame_listbox = tk.LabelFrame(root, text="Bilgiler")
+frame_listbox.pack(padx=10, pady=10, side=tk.RIGHT, fill=tk.BOTH, expand=True)  # side parametresi eklenerek sağ tarafa konumlandırıldı
+
+entry_listbox = tk.Listbox(frame_listbox, width=100)  # Genişlik artırıldı
+entry_listbox.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)  # expand ve fill parametreleri eklenerek genişletildi ve dolduruldu
+
+# Liste Kutuları ve Giriş Kutularının Konumu Değiştirildi (değişmiş)
+frame_left = tk.Frame(root)
+frame_left.pack(padx=10, pady=10, side=tk.LEFT, fill=tk.BOTH, expand=True)  # Sol tarafa konumlandırıldı
+
+
+root.mainloop()
